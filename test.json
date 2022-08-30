@@ -5,16 +5,19 @@
     "servers": [
       {
         "name": "nas",
+        "type": "storage",
         "position": 1,
         "size": 2
       },
       {
         "name": "switch",
-        "position": 3,
+        "type":"switch",
+        "position": 11,
         "size": 1
       },
       {
         "name": "compute",
+        "type": "server",
         "position": 4,
         "size": 2
       }

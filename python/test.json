@@ -6,7 +6,7 @@
       {
         "name": "nas",
         "type": "storage",
-        "position": 9,
+        "position": 10,
         "size": 2,
         "drives": 12,
         "driveSize": 3.5,

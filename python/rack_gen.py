@@ -74,7 +74,7 @@ def createSwitch(switchObj, rackSize):
         return False
     tempGroup = dwg.add(dwg.g(id=switchObj["name"]))
     height = ((rackSize - switchObj["position"]) * 1.75) + 1
-    tempGroup.add(dwg.rect(insert=(".5in",str(height)+"in"), size=("19in",str(switchObj["size"]*1.75)+"in")))   #body rectangle
+    tempGroup.add(dwg.rect(insert=(".5in",str(height)+"in"), size=("19in",str(switchObj["size"]*1.75)+"in"), fill="url(#angle_lin_grad)"))   #body rectangle
     tempGroup.add(dwg.circle(center=(".8125in",str(height+.25)+"in"), r=".1in", fill="#555555"))    #top left screw
     tempGroup.add(dwg.circle(center=(".8125in",str(height+(1.5 + ((switchObj["size"] - 1) * 1.75)))+"in"), r=".1in", fill="#555555"))    #bottom left screw
     tempGroup.add(dwg.circle(center=("19.1875in",str(height+.25)+"in"), r=".1in", fill="#555555"))  #top right screw
@@ -96,7 +96,7 @@ def createStorage(storageObj, rackSize):
         return False
     tempGroup = dwg.add(dwg.g(id=storageObj["name"]))
     height = ((rackSize - storageObj["position"]) * 1.75) + 1
-    tempGroup.add(dwg.rect(insert=(".5in",str(height)+"in"), size=("19in",str(storageObj["size"]*1.75)+"in")))   #body rectangle
+    tempGroup.add(dwg.rect(insert=(".5in",str(height)+"in"), size=("19in",str(storageObj["size"]*1.75)+"in"), fill="url(#angle_lin_grad)"))   #body rectangle
     tempGroup.add(dwg.circle(center=(".8125in",str(height+.25)+"in"), r=".1in", fill="#555555"))    #top left screw
     tempGroup.add(dwg.circle(center=(".8125in",str(height+(1.5 + ((storageObj["size"] - 1) * 1.75)))+"in"), r=".1in", fill="#555555"))    #bottom left screw
     tempGroup.add(dwg.circle(center=("19.1875in",str(height+.25)+"in"), r=".1in", fill="#555555"))  #top right screw
@@ -134,6 +134,13 @@ f.close()
 # print(data['rack']['size'])
 
 dwg = svgwrite.Drawing(filename="rack.svg", debug=True)
+
+angle_grad = svgwrite.gradients.LinearGradient(start=(0, 0.35), end=(1,0.75), id="angle_lin_grad")
+angle_grad.add_stop_color(offset='15%', color='black', opacity=None)
+angle_grad.add_stop_color(offset='50%', color='grey', opacity=None)
+angle_grad.add_stop_color(offset='85%', color='black', opacity=None)
+dwg.defs.add(angle_grad)
+
 
 size = 0
 

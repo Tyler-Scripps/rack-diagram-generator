@@ -1,24 +1,27 @@
 {
-    "rack": {
-      "size": 12
-    },
+  "rack1": {
+    "name": "rack1",
+    "size": 8,
+    "type": "rack",
+    "notes": "rack notes",
     "servers": [
       {
         "name": "nas",
         "type": "storage",
-        "position": 10,
+        "position": 4,
         "size": 2,
         "drives": 12,
         "driveSize": 3.5,
-        "ip": "1.1.1.1"
+        "ip": "1.1.1.2"
       },
       {
         "name": "switch",
         "type":"switch",
-        "position": 11,
+        "position": 6,
         "size": 1,
         "ports": 24,
-        "ip":"1.1.1.1"
+        "ip":"1.1.1.1",
+        "notes":"switch notes"
       },
       {
         "name": "compute",
@@ -28,3 +31,4 @@
       }
     ]
   }
+}

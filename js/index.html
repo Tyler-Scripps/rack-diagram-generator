@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body style="margin: 0;">
+    <input type="file" id="fileUpload">
+    <br>
+    <button id="download">Download Canvas</button>
+    <br>
+    <div id="controls">
+        <button id="toggleSelected">Toggle Selected</button>
+        <label for="nameText">Name</label>
+        <input type="text" id="nameText" disabled>
+        <label for="ipText">ip</label>
+        <input type="text" id="ipText" disabled>
+        <label for="notesText">Notes</label>
+        <input type="text" id="notesText" disabled>
+    </div>
+    <canvas id="canvas" style="width: 100vw;" width="1012.5"></canvas>
+</body>
+<!-- <script src="http://cdnjs.cloudflare.com/ajax/libs/ocanvas/2.10.0/ocanvas.min.js"></script> --> <!--This is the minified version which may be harder to debug but should be used in production-->
+<script src="http://cdnjs.cloudflare.com/ajax/libs/ocanvas/2.10.0/ocanvas.js"></script>
+<script src="./index.js"></script>
+</html>

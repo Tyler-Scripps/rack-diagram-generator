@@ -1,6 +1,9 @@
 var mainData;
-var selectedId = 0;
 var currentSelectedcanvas;
+var currentSelectedItem;
+var network = {};
+
+const highlightColor = "#f00"
 
 const ppi = 50;
 
@@ -26,7 +29,14 @@ document.getElementById("toggleSelected").addEventListener("click", function(e) 
     currentSelectedcanvas.trigger("toggle");
 });
 
-document.getElementById("fileUpload").addEventListener("change", handleUpload())
+document.getElementById("fileUpload").addEventListener("change", handleUpload());
+
+document.getElementById("applyChanges").addEventListener("click", function() {
+    currentSelectedItem.ip = document.getElementById("ipText").value;
+    currentSelectedItem.name = document.getElementById("nameText").value;
+    currentSelectedItem.notes = document.getElementById("notesText").value;
+    // console.log(mainData);
+});
 
 function inchToPixels(inch) {
     return inch*ppi;
@@ -36,12 +46,43 @@ function mmToPixels(mm) {
     return mm * (ppi/25.4);
 }
 
+function registerNetDevice(deviceCanvas, netName){
+    if (netName in network) {   //net already exists
+        network[netName].push(deviceCanvas);
+    } else {    //net does not exist
+        network[netName] = [deviceCanvas];
+    }
+    deviceCanvas.bind("click tap", function(e) {
+        e.stopPropagation();
+        highlightNet(netName)
+    });
+    // console.log(network);
+}
+
+function highlightNet(netName) {
+    for (const name in network) {
+        for (let index = 0; index < network[netName].length; index++) {
+            network[name][index].trigger("lowlight");
+            // console.log(network[name][index]);
+        }
+    }
+
+    for (let index = 0; index < network[netName].length; index++) {
+        network[netName][index].trigger("highlight");
+        // console.log(network[netName][index]);
+    }
+    canvas.redraw();
+
+    // console.log(oCanvas.draw.objects);
+}
+
 function selectItem(itemCanvas, itemObj) {
     // console.log(itemObj.name);
     document.getElementById("notesText").value = itemObj.notes;
     document.getElementById("ipText").value = itemObj.ip;
     document.getElementById("nameText").value = itemObj.name;
     currentSelectedcanvas = itemCanvas;
+    currentSelectedItem = itemObj;
 }
 
 function handleUpload() {
@@ -250,8 +291,8 @@ function createRack(rackObj) {
  * @param {float} x 
  * @param {float} y 
  */
-function createEthernet(parentObj, x, y) {
-    largeRect = canvas.display.rectangle({
+function createEthernet(parentObj, x, y, label="", netName = "") {
+    let largeRect = canvas.display.rectangle({
         origin: {x:"center", y:"center"},
         x: x,
         y: y,
@@ -259,6 +300,17 @@ function createEthernet(parentObj, x, y) {
         height: mmToPixels(13.5),
         fill: "#444444"
     });
+
+    if (netName.length == 0) {
+        netName = "unconnected"
+    }
+
+    largeRect.bind("click", function(e) {
+        e.stopPropagation();
+        highlightNet(netName);
+    });
+
+    registerNetDevice(largeRect, netName);
 
     largeInner = canvas.display.rectangle({
         origin: {x: "center", y: "center"},
@@ -278,8 +330,24 @@ function createEthernet(parentObj, x, y) {
         fill: "000"
     });
 
+    
+
     largeRect.addChild(largeInner);
     largeRect.addChild(smallInner);
+
+    largeRect.bind("highlight", function(e) {
+        e.stopPropagation();
+        largeRect.children[0].fill = highlightColor;
+        largeRect.children[1].fill = highlightColor;
+        // console.log(largeRect);
+    });
+
+    largeRect.bind("lowlight", function(e) {
+        e.stopPropagation();
+        largeRect.children[0].fill = "#000";
+        largeRect.children[1].fill = "#000";
+        // console.log(largeRect);
+    });
 
     parentObj.addChild(largeRect);
 }

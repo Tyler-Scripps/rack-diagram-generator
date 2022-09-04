@@ -131,12 +131,7 @@ function highlightNet(netName) {
     currentNet = netName;
     for (let index = 0; index < network[netName].length; index++) {
         network[netName][index].trigger("highlight");
-        // console.log(network[netName][index]);
     }
-    
-    // canvas.redraw();
-
-    // console.log(oCanvas.draw.objects);
 }
 
 function selectItem(itemCanvas, itemObj) {
@@ -163,6 +158,8 @@ function handleUpload() {
                 createRack(mainData[key]);
             } else if (mainData[key].type == "storage") {
                 createStorage(mainData[key], backRect, true, 0, 0);
+            } else if (mainData[key].type == "compute") {
+                createCompute(mainData[key], backRect, true, 0, 0);
             }
         }
         canvas.redraw();
@@ -349,6 +346,8 @@ function createRack(rackObj) {
                 createSwitch(rackObj["servers"][key], rackObj.size, rack);
             } else if (rackObj["servers"][key].type == "storage") {
                 createStorage(rackObj["servers"][key], rack, false, inchToPixels(.625), inchToPixels(1+(1.75*(rackObj.size-rackObj["servers"][key].position))));
+            } else if (rackObj["servers"][key].type == "compute") {
+                createCompute(rackObj["servers"][key], rack, false, inchToPixels(.625), inchToPixels(1+(1.75*(rackObj.size-rackObj["servers"][key].position))));
             }
         }
     }
@@ -525,30 +524,6 @@ function createSwitch(switchObj, rackSize, parentCanvas, x=-1, y=-1) {
 }
 
 function createStorage(storageObj, parentCanvas, draggable=false, x=-1, y=-1) {
-    // console.log("x: " + x.toString() + " y: " + y.toString());
-    // if (x == -1 || y == -1) {   //storage is part of rack
-    //     var bodyRect = canvas.display.rectangle({
-    //         x: inchToPixels(.625),
-    //         y: inchToPixels(1+(1.75*(rackSize-storageObj.position))),
-    //         width: inchToPixels(19),
-    //         height: inchToPixels(1.75*storageObj.size),
-    //         fill: "linear-gradient(315deg, black, grey, black)",
-    //         strokeWidth: inchToPixels(.125),
-    //         strokeColor: "transparent"
-    //     });
-    // } else {
-    //     var bodyRect = canvas.display.rectangle({
-    //         x: inchToPixels(x),
-    //         y: inchToPixels(y),
-    //         width: inchToPixels(19),
-    //         height: inchToPixels(1.75*storageObj.size),
-    //         fill: "linear-gradient(315deg, black, grey, black)",
-    //         strokeWidth: inchToPixels(.125),
-    //         strokeColor: "transparent"
-    //     });
-        
-    // }
-
     var bodyRect = canvas.display.rectangle({
         x: x,
         y: y,
@@ -650,17 +625,106 @@ function createStorage(storageObj, parentCanvas, draggable=false, x=-1, y=-1) {
     }
 
     parentCanvas.addChild(bodyRect);
-    // if (x != -1 && y != -1) {
-    //     console.log("enabling drag");
-    //     bodyRect.dragAndDrop(dragOptions);
-    // }
-    // console.log("x: " + x.toString() + " y: " + y.toString());
-    // if (x == -1 || y == -1) {   //storage is part of rack
-    //     parentCanvas.addChild(bodyRect);
-    //     console.log("not enabling drag");
-    // } else {
-    //     backRect.addChild(bodyRect);
-    //     bodyRect.dragAndDrop(dragOptions);
-    //     console.log("enabling drag");
-    // }
+}
+
+function createCompute(computeObj, parentCanvas, draggable=false, x=-1, y=-1) {
+    var bodyRect = canvas.display.rectangle({
+        x: x,
+        y: y,
+        width: inchToPixels(19),
+        height: inchToPixels(1.75*computeObj.size),
+        fill: "linear-gradient(315deg, dimgray, darkgray, dimgray)",
+        strokeWidth: inchToPixels(.125),
+        strokeColor: "transparent"
+    });
+
+    if (draggable) {
+        bodyRect.dragAndDrop(dragOptions);
+    }
+
+    bodyRect.bind("toggle", function(e) {
+        e.stopPropagation();
+        this.opacity = !this.opacity;
+        canvas.redraw();
+    });
+
+    bodyRect.bind("click tap", function(e) {
+        e.stopPropagation();
+        selectItem(bodyRect, computeObj);
+    });
+
+    bodyRect.bind("highlight", function(e){
+        e.stopPropagation();
+        bodyRect.strokeColor = highlightColor;
+    });
+
+    bodyRect.bind("lowlight", function(e){
+        e.stopPropagation();
+        bodyRect.strokeColor = "transparent";
+    });
+
+    if ("connections" in computeObj) {
+        // console.log(storageObj.connections);
+        let connList = [];
+        for (const conn in computeObj.connections) {
+            connList.push(computeObj.connections[conn]);
+        }
+        registerNetDevice(bodyRect, connList);
+    }
+
+    var screwTL = canvas.display.ellipse({
+        x: inchToPixels(.3125),
+        y: inchToPixels(.25),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwTR = canvas.display.ellipse({
+        x: inchToPixels(18.6875),
+        y: inchToPixels(.25),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwBL = canvas.display.ellipse({
+        x: inchToPixels(.3125),
+        y: (bodyRect.height - inchToPixels(.25)),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwBR = canvas.display.ellipse({
+        x: inchToPixels(18.6875),
+        y: (bodyRect.height - inchToPixels(.25)),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    //grill holes
+    for (let i = 0; i < 40; i++) {
+        for (let j = 0; j < (5 * computeObj.size); j++) {
+            var tempCir = canvas.display.ellipse({
+                fill: "#000",
+                radius: inchToPixels(.075),
+                x: inchToPixels(.625 + ((17.75/40)/2) + ((17.75/40)*i)),
+                y: inchToPixels(.175 + (.35*j))
+            });
+            bodyRect.addChild(tempCir);
+        }
+    }
+
+    var centerCir = canvas.display.ellipse({
+        radius: inchToPixels(.75),
+        x: inchToPixels(9.5),
+        y: inchToPixels((computeObj.size * 1.75) / 2),
+        fill: "silver"
+    });
+    bodyRect.addChild(centerCir);
+
+    bodyRect.addChild(screwTL);
+    bodyRect.addChild(screwTR);
+    bodyRect.addChild(screwBL);
+    bodyRect.addChild(screwBR);
+
+    parentCanvas.addChild(bodyRect);
 }

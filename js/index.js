@@ -2,17 +2,41 @@ var mainData;
 var currentSelectedcanvas;
 var currentSelectedItem;
 var network = {};
+var currentNets = [];
 
 const highlightColor = "#f00"
+const dragOptions = {changeZindex: true, bubble: false};
 
 const ppi = 50;
 
+window.addEventListener("load", function(e) {
+    // console.log("loaded");
+    const event1 = new Event('input');
+    document.getElementById("zoomRange").dispatchEvent(event1);
+});
+
+//iif there is still a file from before page was (presumably) reloaded then start with that
+if (document.getElementById("fileUpload").files.length > 0) {
+    // console.log(document.getElementById("fileUpload").files.length);
+    handleUpload();
+}
 
 var canvas = oCanvas.create({
 	canvas: "#canvas",
-	background: "#ccc",
+	background: "#fff",
 	fps: 60
 });
+
+var backRect = canvas.display.rectangle({
+    origin: {x:"center",y:"center"},
+    x: 0,
+    y: 0,
+    width: 20000,
+    height: 20000,
+    fill: "#ccc"
+});
+canvas.addChild(backRect);
+backRect.dragAndDrop();
 
 document.getElementById('download').addEventListener('click', function(e) {
     let canvas1 = document.getElementById('canvas');
@@ -29,13 +53,22 @@ document.getElementById("toggleSelected").addEventListener("click", function(e) 
     currentSelectedcanvas.trigger("toggle");
 });
 
-document.getElementById("fileUpload").addEventListener("change", handleUpload());
+document.getElementById("fileUpload").addEventListener("change", handleUpload);
 
 document.getElementById("applyChanges").addEventListener("click", function() {
     currentSelectedItem.ip = document.getElementById("ipText").value;
     currentSelectedItem.name = document.getElementById("nameText").value;
     currentSelectedItem.notes = document.getElementById("notesText").value;
     // console.log(mainData);
+});
+
+document.getElementById("zoomRange").addEventListener("input", function(e) {
+    // console.log(e);
+    console.log(document.getElementById("zoomRange").valueAsNumber);
+    canvas.width = document.getElementById("zoomRange").valueAsNumber;
+    let tempPPI = canvas.width/document.getElementById("canvas").offsetWidth;
+    // console.log(tempPPI);
+    canvas.height = tempPPI * document.getElementById("canvas").offsetHeight;
 });
 
 function inchToPixels(inch) {
@@ -46,32 +79,62 @@ function mmToPixels(mm) {
     return mm * (ppi/25.4);
 }
 
-function registerNetDevice(deviceCanvas, netName){
-    if (netName in network) {   //net already exists
-        network[netName].push(deviceCanvas);
-    } else {    //net does not exist
-        network[netName] = [deviceCanvas];
+function registerNetDevice(deviceCanvas, netNames){
+
+    for (const net in netNames) {
+        if (netNames[net] in network) {   //net already exists
+            network[netNames[net]].push(deviceCanvas);
+        } else {    //net does not exist
+            network[netNames[net]] = [deviceCanvas];
+        }
     }
     deviceCanvas.bind("click tap", function(e) {
         e.stopPropagation();
-        highlightNet(netName)
+        // console.log(netNames);
+        lowlightNetwork();
+
+        //checks if netNames of device is equal to currentNets
+        let result =
+            netNames.length === currentNets.length &&
+            netNames.every(function (element) {
+                return currentNets.includes(element);
+            });
+        
+        if (result) {   //netNames and currentNets are equal
+            currentNets = [];
+            console.log("arrays equal");
+        } else {    //netNames and currentNets are different
+            currentNets = netNames;
+            for (const net in netNames) {
+                // console.log(netNames[net]);
+                highlightNet(netNames[net]);
+            }
+        }
+        canvas.redraw();
     });
     // console.log(network);
 }
 
-function highlightNet(netName) {
-    for (const name in network) {
-        for (let index = 0; index < network[netName].length; index++) {
-            network[name][index].trigger("lowlight");
+function lowlightNetwork() {
+    for (const net in network) {
+        // console.log(name);
+        for (let index = 0; index < network[net].length; index++) {
+            // console.log(index);
+            network[net][index].trigger("lowlight");
             // console.log(network[name][index]);
         }
     }
+}
 
+function highlightNet(netName) {
+    console.log(netName);
+    currentNet = netName;
     for (let index = 0; index < network[netName].length; index++) {
         network[netName][index].trigger("highlight");
         // console.log(network[netName][index]);
     }
-    canvas.redraw();
+    
+    // canvas.redraw();
 
     // console.log(oCanvas.draw.objects);
 }
@@ -86,30 +149,40 @@ function selectItem(itemCanvas, itemObj) {
 }
 
 function handleUpload() {
+    // console.log("handling upload");
     let file = document.getElementById("fileUpload").files[0];
     // console.log(file);
     let reader = new FileReader();
     reader.readAsText(file);
     reader.onload = function() {
+        clearChildren(backRect);
         mainData = JSON.parse(reader.result);
         // console.log(mainData);
         for (let key in mainData) {
             if (mainData[key].type == "rack") {
                 createRack(mainData[key]);
+            } else if (mainData[key].type == "storage") {
+                createStorage(mainData[key], backRect, true, 0, 0);
             }
         }
         canvas.redraw();
     };
 }
 
+function clearChildren(canvasObj) {
+    while (canvasObj.children.length > 0) {
+        canvasObj.removeChildAt(0);
+    }
+}
+
 function createRack(rackObj) {
-    canvas.height = (rackObj.size * inchToPixels(1.75)) + inchToPixels(2);
+    // canvas.height = (rackObj.size * inchToPixels(1.75)) + inchToPixels(2);
     
     var rack = canvas.display.rectangle({
         x: 0,
         y: 0,
         width: inchToPixels(20.25),
-        height: canvas.height,
+        height: inchToPixels(2+(1.75*rackObj.size)),
         opacity: 1
     });
 
@@ -144,7 +217,7 @@ function createRack(rackObj) {
         x:0,
         y:inchToPixels(1),
         width: inchToPixels(1.125),
-        height: canvas.height-inchToPixels(2),
+        height: rack.height-inchToPixels(2),
         fill: "#252525"
     });
 
@@ -153,7 +226,7 @@ function createRack(rackObj) {
         x:inchToPixels(20.25),
         y:inchToPixels(1),
         width: inchToPixels(1.125),
-        height: canvas.height-inchToPixels(2),
+        height: rack.height-inchToPixels(2),
         fill: "#252525"
     });
 
@@ -275,13 +348,14 @@ function createRack(rackObj) {
             if (rackObj["servers"][key].type == "switch") {
                 createSwitch(rackObj["servers"][key], rackObj.size, rack);
             } else if (rackObj["servers"][key].type == "storage") {
-                createStorage(rackObj["servers"][key], rackObj.size, rack)
+                createStorage(rackObj["servers"][key], rack, false, inchToPixels(.625), inchToPixels(1+(1.75*(rackObj.size-rackObj["servers"][key].position))));
             }
         }
     }
     
 
-    canvas.addChild(rack);
+    backRect.addChild(rack);
+    rack.dragAndDrop(dragOptions);
     // console.log(canvas.children);
 }
 
@@ -291,8 +365,9 @@ function createRack(rackObj) {
  * @param {float} x 
  * @param {float} y 
  */
-function createEthernet(parentObj, x, y, label="", netName = "") {
-    let largeRect = canvas.display.rectangle({
+function createEthernet(parentObj, x, y, labelText="", netName = "") {
+    // console.log(netName);
+    var largeRect = canvas.display.rectangle({
         origin: {x:"center", y:"center"},
         x: x,
         y: y,
@@ -305,14 +380,9 @@ function createEthernet(parentObj, x, y, label="", netName = "") {
         netName = "unconnected"
     }
 
-    largeRect.bind("click", function(e) {
-        e.stopPropagation();
-        highlightNet(netName);
-    });
+    registerNetDevice(largeRect, [netName]);
 
-    registerNetDevice(largeRect, netName);
-
-    largeInner = canvas.display.rectangle({
+    var largeInner = canvas.display.rectangle({
         origin: {x: "center", y: "center"},
         width: mmToPixels(11.6),
         height: mmToPixels(9),
@@ -321,7 +391,7 @@ function createEthernet(parentObj, x, y, label="", netName = "") {
         fill: "000"
     });
 
-    smallInner = canvas.display.rectangle({
+    var smallInner = canvas.display.rectangle({
         origin: {x: "center", y: "top"},
         width: mmToPixels(6.35),
         height: mmToPixels(2),
@@ -330,10 +400,19 @@ function createEthernet(parentObj, x, y, label="", netName = "") {
         fill: "000"
     });
 
-    
+    var label = canvas.display.text({
+        origin: { x: "center", y: "center"},
+        x:inchToPixels(0),
+        y:inchToPixels(0),
+        font: inchToPixels(.25).toString() + "px sans-serif",
+        // size: inchToPixels(1),
+        fill: "#ffff",
+        text: labelText
+    });
 
     largeRect.addChild(largeInner);
     largeRect.addChild(smallInner);
+    largeRect.addChild(label);
 
     largeRect.bind("highlight", function(e) {
         e.stopPropagation();
@@ -429,10 +508,14 @@ function createSwitch(switchObj, rackSize, parentCanvas, x=-1, y=-1) {
 
 
         for (let index = 0; index < switchObj.ports; index++) {
+            let tempConn = "";
+            if (("connections" in switchObj) && ((switchObj.ports-index) in switchObj.connections)) {
+                tempConn = switchObj.connections[(switchObj.ports-index)];
+            }
             if ((index % 2) == 0) {
-                createEthernet(bodyRect, inchToPixels(18-(.7*(index/2))), inchToPixels(.55));
+                createEthernet(bodyRect, inchToPixels(18-(.7*(index/2))), inchToPixels(1.2), labelText=(switchObj.ports-index).toString(), netName=tempConn);
             } else {
-                createEthernet(bodyRect, inchToPixels(18-(.7*Math.trunc((index/2)))), inchToPixels(1.2));
+                createEthernet(bodyRect, inchToPixels(18-(.7*Math.trunc((index/2)))), inchToPixels(.55), labelText=(switchObj.ports-index).toString(), netName=tempConn);
             }
         }
 
@@ -441,84 +524,143 @@ function createSwitch(switchObj, rackSize, parentCanvas, x=-1, y=-1) {
     }
 }
 
-function createStorage(storageObj, rackSize, parentCanvas, x=-1, y=-1) {
-    if (x == -1 || y == -1) {   //storage is part of rack
-        var bodyRect = canvas.display.rectangle({
-            x: inchToPixels(.625),
-            y: inchToPixels(1+(1.75*(rackSize-storageObj.position))),
-            width: inchToPixels(19),
-            height: inchToPixels(1.75*storageObj.size),
-            fill: "linear-gradient(315deg, black, grey, black)"
-        });
+function createStorage(storageObj, parentCanvas, draggable=false, x=-1, y=-1) {
+    // console.log("x: " + x.toString() + " y: " + y.toString());
+    // if (x == -1 || y == -1) {   //storage is part of rack
+    //     var bodyRect = canvas.display.rectangle({
+    //         x: inchToPixels(.625),
+    //         y: inchToPixels(1+(1.75*(rackSize-storageObj.position))),
+    //         width: inchToPixels(19),
+    //         height: inchToPixels(1.75*storageObj.size),
+    //         fill: "linear-gradient(315deg, black, grey, black)",
+    //         strokeWidth: inchToPixels(.125),
+    //         strokeColor: "transparent"
+    //     });
+    // } else {
+    //     var bodyRect = canvas.display.rectangle({
+    //         x: inchToPixels(x),
+    //         y: inchToPixels(y),
+    //         width: inchToPixels(19),
+    //         height: inchToPixels(1.75*storageObj.size),
+    //         fill: "linear-gradient(315deg, black, grey, black)",
+    //         strokeWidth: inchToPixels(.125),
+    //         strokeColor: "transparent"
+    //     });
+        
+    // }
 
-        bodyRect.bind("toggle", function(e) {
-            e.stopPropagation();
-            this.opacity = !this.opacity;
-            canvas.redraw();
-        });
-    
-        bodyRect.bind("click tap", function(e) {
-            e.stopPropagation();
-            selectItem(bodyRect, storageObj);
-            // console.log("selected switch");
-        });
+    var bodyRect = canvas.display.rectangle({
+        x: x,
+        y: y,
+        width: inchToPixels(19),
+        height: inchToPixels(1.75*storageObj.size),
+        fill: "linear-gradient(315deg, black, grey, black)",
+        strokeWidth: inchToPixels(.125),
+        strokeColor: "transparent"
+    });
 
-        var screwTL = canvas.display.ellipse({
-            x: inchToPixels(.3125),
-            y: inchToPixels(.25),
-            radius: inchToPixels(.1),
-            fill: "#555555"
-        });
-
-        var screwTR = canvas.display.ellipse({
-            x: inchToPixels(18.6875),
-            y: inchToPixels(.25),
-            radius: inchToPixels(.1),
-            fill: "#555555"
-        });
-
-        var screwBL = canvas.display.ellipse({
-            x: inchToPixels(.3125),
-            y: (bodyRect.height - inchToPixels(.25)),
-            radius: inchToPixels(.1),
-            fill: "#555555"
-        });
-
-        var screwBR = canvas.display.ellipse({
-            x: inchToPixels(18.6875),
-            y: (bodyRect.height - inchToPixels(.25)),
-            radius: inchToPixels(.1),
-            fill: "#555555"
-        });
-
-        bodyRect.addChild(screwTL);
-        bodyRect.addChild(screwTR);
-        bodyRect.addChild(screwBL);
-        bodyRect.addChild(screwBR);
-
-        if (storageObj.driveSize == 3.5) {
-            for (let index = 0; index < storageObj.drives; index++) {
-                y = .625 + (Math.trunc(index/4)*1.125);
-                let temp = index % 4;
-                switch (temp) {
-                    case 0:
-                        x = 16.4;
-                        break;
-                    case 1:
-                        x = 11.925;
-                        break;
-                    case 2:
-                        x = 7.45;
-                        break;
-                    case 3:
-                        x = 2.975;
-                        break;
-                }
-                createDriveLFF(bodyRect, inchToPixels(x), inchToPixels(y));
-            }
-        }
-
-        parentCanvas.addChild(bodyRect);
-
+    if (draggable) {
+        bodyRect.dragAndDrop(dragOptions);
     }
+
+    bodyRect.bind("toggle", function(e) {
+        e.stopPropagation();
+        this.opacity = !this.opacity;
+        canvas.redraw();
+    });
+
+    bodyRect.bind("click tap", function(e) {
+        e.stopPropagation();
+        selectItem(bodyRect, storageObj);
+    });
+
+    bodyRect.bind("highlight", function(e){
+        e.stopPropagation();
+        bodyRect.strokeColor = highlightColor;
+    });
+
+    bodyRect.bind("lowlight", function(e){
+        e.stopPropagation();
+        bodyRect.strokeColor = "transparent";
+    });
+
+    if ("connections" in storageObj) {
+        // console.log(storageObj.connections);
+        let connList = [];
+        for (const conn in storageObj.connections) {
+            connList.push(storageObj.connections[conn]);
+        }
+        registerNetDevice(bodyRect, connList);
+    }
+
+    var screwTL = canvas.display.ellipse({
+        x: inchToPixels(.3125),
+        y: inchToPixels(.25),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwTR = canvas.display.ellipse({
+        x: inchToPixels(18.6875),
+        y: inchToPixels(.25),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwBL = canvas.display.ellipse({
+        x: inchToPixels(.3125),
+        y: (bodyRect.height - inchToPixels(.25)),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    var screwBR = canvas.display.ellipse({
+        x: inchToPixels(18.6875),
+        y: (bodyRect.height - inchToPixels(.25)),
+        radius: inchToPixels(.1),
+        fill: "#555555"
+    });
+
+    bodyRect.addChild(screwTL);
+    bodyRect.addChild(screwTR);
+    bodyRect.addChild(screwBL);
+    bodyRect.addChild(screwBR);
+
+    if (storageObj.driveSize == 3.5) {
+        for (let index = 0; index < storageObj.drives; index++) {
+            let y = .625 + (Math.trunc(index/4)*1.125);
+            let temp = index % 4;
+            let x = 0;
+            switch (temp) {
+                case 0:
+                    x = 16.4;
+                    break;
+                case 1:
+                    x = 11.925;
+                    break;
+                case 2:
+                    x = 7.45;
+                    break;
+                case 3:
+                    x = 2.975;
+                    break;
+            }
+            createDriveLFF(bodyRect, inchToPixels(x), inchToPixels(y));
+        }
+    }
+
+    parentCanvas.addChild(bodyRect);
+    // if (x != -1 && y != -1) {
+    //     console.log("enabling drag");
+    //     bodyRect.dragAndDrop(dragOptions);
+    // }
+    // console.log("x: " + x.toString() + " y: " + y.toString());
+    // if (x == -1 || y == -1) {   //storage is part of rack
+    //     parentCanvas.addChild(bodyRect);
+    //     console.log("not enabling drag");
+    // } else {
+    //     backRect.addChild(bodyRect);
+    //     bodyRect.dragAndDrop(dragOptions);
+    //     console.log("enabling drag");
+    // }
 }

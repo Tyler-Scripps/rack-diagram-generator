@@ -1,7 +1,7 @@
 {
   "rack1": {
     "name": "rack1",
-    "size": 8,
+    "size": 12,
     "type": "rack",
     "notes": "rack notes",
     "servers": [
@@ -9,10 +9,11 @@
         "name": "nas",
         "type": "storage",
         "position": 4,
-        "size": 2,
-        "drives": 12,
+        "size": 3,
+        "drives": 16,
         "driveSize": 3.5,
-        "ip": "1.1.1.2"
+        "ip": "1.1.1.2",
+        "connections": {"1":"nasConn1", "2":"nasConn2"}
       },
       {
         "name": "switch",
@@ -21,7 +22,8 @@
         "size": 1,
         "ports": 24,
         "ip":"1.1.1.1",
-        "notes":"switch notes"
+        "notes":"switch notes",
+        "connections": {"1":"conn1", "2":"conn1", "3":"nasConn1", "4":"nasConn2"}
       },
       {
         "name": "compute",
@@ -30,5 +32,13 @@
         "size": 2
       }
     ]
+  },
+  "extStorage1": {
+    "type":"storage",
+    "name":"extnas",
+    "size":1,
+    "drives":4,
+    "driveSize":3.5,
+    "connections": {"1":"nasConn2"}
   }
 }
